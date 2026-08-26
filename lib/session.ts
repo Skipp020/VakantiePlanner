@@ -2,15 +2,12 @@ import "server-only";
 import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import type { MemberRow } from "@/lib/types";
 
 export const SESSION_COOKIE = "vp_session_token";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365; // 1 jaar
 
-export type Member = {
-  id: string;
-  name: string;
-  total_days: number;
-};
+export type Member = MemberRow;
 
 export function generateSessionToken() {
   return randomBytes(32).toString("hex");
@@ -42,7 +39,7 @@ export async function getCurrentMember(): Promise<Member | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("members")
-    .select("id, name, total_days")
+    .select("id, name, hours_per_week, working_days")
     .eq("session_token", token)
     .maybeSingle();
 

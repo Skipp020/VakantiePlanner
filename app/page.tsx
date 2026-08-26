@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentMember } from "@/lib/session";
 import { LoginForm } from "@/components/LoginForm";
 import { Header } from "@/components/Header";
+import { AccountSettings } from "@/components/AccountSettings";
 import { ConfigWarning } from "@/components/ConfigWarning";
 import { PlannerGrid } from "@/components/PlannerGrid";
 import { leaveKey, type LeaveMap, type MemberRow } from "@/lib/types";
@@ -39,7 +40,10 @@ export default async function HomePage({
   try {
     const supabase = createServiceClient();
     const [membersResult, leaveResult] = await Promise.all([
-      supabase.from("members").select("id, name, total_days").order("name"),
+      supabase
+        .from("members")
+        .select("id, name, hours_per_week, working_days")
+        .order("name"),
       supabase
         .from("leave_days")
         .select("member_id, date, status")
@@ -61,6 +65,7 @@ export default async function HomePage({
   return (
     <div className="mx-auto max-w-[1600px] p-4">
       <Header memberName={member.name} year={year} />
+      <AccountSettings member={member} />
       <PlannerGrid
         key={year}
         year={year}

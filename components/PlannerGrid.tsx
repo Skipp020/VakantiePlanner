@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toggleLeaveDay } from "@/app/actions";
 import { getDutchHolidays } from "@/lib/holidays";
+import { computeTotalDays } from "@/lib/leaveEntitlement";
 import { getWorkdaysByMonth } from "@/lib/workdays";
 import { leaveKey, type LeaveMap, type LeaveStatus, type MemberRow } from "@/lib/types";
 
@@ -82,8 +83,13 @@ export function PlannerGrid({
     });
   }
 
-  function cellStyle(status: LeaveStatus | undefined, holidayName: string | undefined) {
+  function cellStyle(
+    status: LeaveStatus | undefined,
+    holidayName: string | undefined,
+    isWorkingDay: boolean
+  ) {
     if (holidayName) return { backgroundColor: hexToRgba(BRAND_GREY, 0.18) };
+    if (!isWorkingDay) return { backgroundColor: hexToRgba(BRAND_GREY, 0.07) };
     if (status === 2) return { backgroundColor: BRAND_MAIN };
     if (status === 1) return { backgroundColor: hexToRgba(BRAND_MID, 0.45) };
     return undefined;
@@ -168,10 +174,11 @@ export function PlannerGrid({
 
             {members.map((member) => {
               const isOwnRow = member.id === currentMemberId;
+              const totalDays = computeTotalDays(member.hours_per_week);
               const confirmedCount = allDays.filter(
                 (d) => leave[leaveKey(member.id, d.iso)] === 2
               ).length;
-              const remaining = member.total_days - confirmedCount;
+              const remaining = totalDays - confirmedCount;
 
               return (
                 <tr key={member.id} className={isOwnRow ? "bg-brand-bright/5" : undefined}>
@@ -187,7 +194,7 @@ export function PlannerGrid({
                     className="sticky z-20 border-b border-brand-grey/10 bg-inherit px-2 py-1 text-center text-brand-grey"
                     style={{ left: STAT_LEFT[0], width: STAT_COL, minWidth: STAT_COL }}
                   >
-                    {member.total_days}
+                    {totalDays}
                   </td>
                   <td
                     className="sticky z-20 border-b border-brand-grey/10 bg-inherit px-2 py-1 text-center text-brand-grey"
@@ -207,7 +214,8 @@ export function PlannerGrid({
                   {allDays.map((d) => {
                     const status = leave[leaveKey(member.id, d.iso)];
                     const holidayName = holidays[d.iso];
-                    const editable = isOwnRow && !holidayName;
+                    const isWorkingDay = member.working_days.includes(d.weekday);
+                    const editable = isOwnRow && !holidayName && isWorkingDay;
 
                     return (
                       <td
@@ -215,7 +223,13 @@ export function PlannerGrid({
                         onClick={editable ? () => handleCellClick(member.id, d.iso) : undefined}
                         title={
                           holidayName ??
-                          (status === 2 ? "Bevestigd" : status === 1 ? "Optie" : undefined)
+                          (!isWorkingDay
+                            ? "Geen werkdag"
+                            : status === 2
+                              ? "Bevestigd"
+                              : status === 1
+                                ? "Optie"
+                                : undefined)
                         }
                         className={`h-6 border-b border-brand-grey/10 ${
                           d.isMonday ? "border-l" : ""
@@ -223,7 +237,7 @@ export function PlannerGrid({
                         style={{
                           width: DAY_COL,
                           minWidth: DAY_COL,
-                          ...cellStyle(status, holidayName),
+                          ...cellStyle(status, holidayName, isWorkingDay),
                         }}
                       />
                     );
@@ -244,6 +258,7 @@ function Legend() {
       <LegendItem color={hexToRgba(BRAND_MID, 0.45)} label="Optie" />
       <LegendItem color={BRAND_MAIN} label="Bevestigd" />
       <LegendItem color={hexToRgba(BRAND_GREY, 0.18)} label="Feestdag" />
+      <LegendItem color={hexToRgba(BRAND_GREY, 0.07)} label="Geen werkdag" />
       <span className="text-brand-main">■ Jouw rij is bewerkbaar — klik op een dag</span>
     </div>
   );
