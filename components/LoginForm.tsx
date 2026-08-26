@@ -33,9 +33,9 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
   }
 
   return (
-    <div className="mx-auto mt-24 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-lg font-semibold">Wie ben je?</h1>
-      <p className="mt-1 text-sm text-slate-500">
+    <div className="mx-auto mt-24 w-full max-w-sm rounded-xl border border-brand-grey/20 bg-white p-6 shadow-sm">
+      <h1 className="text-lg font-bold text-brand-dark">Wie ben je?</h1>
+      <p className="mt-1 text-sm text-brand-grey">
         Geen wachtwoord nodig — kies je naam of voeg jezelf toe.
       </p>
 
@@ -44,10 +44,10 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
           <button
             type="button"
             onClick={() => setMode("pick")}
-            className={`rounded-md px-3 py-1 ${
+            className={`rounded-md px-3 py-1 font-medium transition-colors ${
               mode === "pick"
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-600"
+                ? "bg-brand-main text-white"
+                : "bg-brand-grey/10 text-brand-grey"
             }`}
           >
             Bestaande naam
@@ -55,10 +55,10 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
           <button
             type="button"
             onClick={() => setMode("new")}
-            className={`rounded-md px-3 py-1 ${
+            className={`rounded-md px-3 py-1 font-medium transition-colors ${
               mode === "new"
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-600"
+                ? "bg-brand-main text-white"
+                : "bg-brand-grey/10 text-brand-grey"
             }`}
           >
             Nieuw teamlid
@@ -71,7 +71,7 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-brand-grey/30 px-3 py-2 text-sm text-brand-grey focus:border-brand-main focus:outline-none focus:ring-1 focus:ring-brand-main"
           >
             {members.map((m) => (
               <option key={m.id} value={m.id}>
@@ -82,7 +82,7 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="w-full rounded-md bg-brand-main px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
           >
             {isPending ? "Bezig..." : "Verder als deze naam"}
           </button>
@@ -94,13 +94,13 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Jouw naam"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-brand-grey/30 px-3 py-2 text-sm text-brand-grey focus:border-brand-main focus:outline-none focus:ring-1 focus:ring-brand-main"
             autoFocus
           />
           <button
             type="submit"
             disabled={isPending}
-            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="w-full rounded-md bg-brand-main px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
           >
             {isPending ? "Bezig..." : "Toevoegen en verder"}
           </button>

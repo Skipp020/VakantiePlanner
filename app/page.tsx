@@ -1,9 +1,16 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentMember } from "@/lib/session";
 import { LoginForm } from "@/components/LoginForm";
-import { logout } from "@/app/actions";
+import { Header } from "@/components/Header";
+import { ConfigWarning } from "@/components/ConfigWarning";
+import { PlannerGrid } from "@/components/PlannerGrid";
+import { leaveKey, type LeaveMap, type MemberRow } from "@/lib/types";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: { year?: string };
+}) {
   const member = await getCurrentMember();
 
   if (!member) {
@@ -17,38 +24,50 @@ export default async function HomePage() {
       if (error) throw error;
       members = data ?? [];
     } catch {
-      return (
-        <div className="mx-auto mt-24 w-full max-w-md rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-          <p className="font-semibold">Supabase is nog niet geconfigureerd.</p>
-          <p className="mt-2">
-            Vul <code>NEXT_PUBLIC_SUPABASE_URL</code>,{" "}
-            <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> en{" "}
-            <code>SUPABASE_SERVICE_ROLE_KEY</code> in (zie{" "}
-            <code>.env.example</code>) en draai de migratie in{" "}
-            <code>supabase/migrations/0001_init.sql</code>.
-          </p>
-        </div>
-      );
+      return <ConfigWarning />;
     }
 
     return <LoginForm members={members} />;
   }
 
+  const parsedYear = Number(searchParams.year);
+  const year = Number.isInteger(parsedYear) ? parsedYear : new Date().getFullYear();
+
+  let members: MemberRow[] = [];
+  const leave: LeaveMap = {};
+
+  try {
+    const supabase = createServiceClient();
+    const [membersResult, leaveResult] = await Promise.all([
+      supabase.from("members").select("id, name, total_days").order("name"),
+      supabase
+        .from("leave_days")
+        .select("member_id, date, status")
+        .gte("date", `${year}-01-01`)
+        .lte("date", `${year}-12-31`),
+    ]);
+
+    if (membersResult.error) throw membersResult.error;
+    if (leaveResult.error) throw leaveResult.error;
+
+    members = membersResult.data ?? [];
+    for (const row of leaveResult.data ?? []) {
+      leave[leaveKey(row.member_id, row.date)] = row.status as 1 | 2;
+    }
+  } catch {
+    return <ConfigWarning />;
+  }
+
   return (
-    <div className="mx-auto mt-24 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-      <p className="text-sm text-slate-500">Ingelogd als</p>
-      <p className="mt-1 text-lg font-semibold">{member.name}</p>
-      <p className="mt-4 text-sm text-slate-500">
-        Het verlofrooster (grid) komt in de volgende stap.
-      </p>
-      <form action={logout} className="mt-6">
-        <button
-          type="submit"
-          className="rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
-        >
-          Uitloggen
-        </button>
-      </form>
+    <div className="mx-auto max-w-[1600px] p-4">
+      <Header memberName={member.name} year={year} />
+      <PlannerGrid
+        key={year}
+        year={year}
+        members={members}
+        initialLeave={leave}
+        currentMemberId={member.id}
+      />
     </div>
   );
 }

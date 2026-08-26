@@ -6,7 +6,10 @@ import {
   generateSessionToken,
   setSessionCookie,
   clearSessionCookie,
+  getCurrentMember,
 } from "@/lib/session";
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export type ActionResult = { error: string } | { error: null };
 
@@ -67,4 +70,59 @@ export async function createMember(name: string): Promise<ActionResult> {
 export async function logout(): Promise<void> {
   clearSessionCookie();
   revalidatePath("/");
+}
+
+/**
+ * Cyclet de verlofstatus van de ingelogde gebruiker op een datum:
+ * geen -> optie (1) -> bevestigd (2) -> geen. De huidige status wordt
+ * altijd uit de database gelezen (nooit van de client aangenomen), zodat
+ * dit ook onder gelijktijdige klikken correct blijft. Je kunt alleen je
+ * eigen rij wijzigen: memberId komt uit het session-cookie, niet uit de
+ * aanroep, dus dit kan niet worden misbruikt om andermans rij te wijzigen.
+ */
+export async function toggleLeaveDay(dateISO: string): Promise<ActionResult> {
+  if (!ISO_DATE.test(dateISO)) return { error: "Ongeldige datum." };
+
+  const member = await getCurrentMember();
+  if (!member) return { error: "Je bent niet (meer) ingelogd." };
+
+  const supabase = createServiceClient();
+
+  const { data: existing, error: readError } = await supabase
+    .from("leave_days")
+    .select("status")
+    .eq("member_id", member.id)
+    .eq("date", dateISO)
+    .maybeSingle();
+
+  if (readError) {
+    return { error: "Bijwerken is niet gelukt. Probeer het opnieuw." };
+  }
+
+  let mutationError = null;
+
+  if (!existing) {
+    ({ error: mutationError } = await supabase
+      .from("leave_days")
+      .insert({ member_id: member.id, date: dateISO, status: 1 }));
+  } else if (existing.status === 1) {
+    ({ error: mutationError } = await supabase
+      .from("leave_days")
+      .update({ status: 2 })
+      .eq("member_id", member.id)
+      .eq("date", dateISO));
+  } else {
+    ({ error: mutationError } = await supabase
+      .from("leave_days")
+      .delete()
+      .eq("member_id", member.id)
+      .eq("date", dateISO));
+  }
+
+  if (mutationError) {
+    return { error: "Bijwerken is niet gelukt. Probeer het opnieuw." };
+  }
+
+  revalidatePath("/");
+  return { error: null };
 }
