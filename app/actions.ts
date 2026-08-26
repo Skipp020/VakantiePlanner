@@ -13,6 +13,18 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export type ActionResult = { error: string } | { error: null };
 
+function validateContract(hoursPerWeek: number, workingDays: number[]): string | null {
+  if (!Number.isFinite(hoursPerWeek) || hoursPerWeek <= 0 || hoursPerWeek > 40) {
+    return "Uren per week moet tussen 0 en 40 liggen.";
+  }
+  const uniqueDays = new Set(workingDays);
+  const allValid = workingDays.every((d) => Number.isInteger(d) && d >= 1 && d <= 5);
+  if (workingDays.length === 0 || !allValid || uniqueDays.size !== workingDays.length) {
+    return "Kies minimaal 1 werkdag (ma-vr).";
+  }
+  return null;
+}
+
 /**
  * "Inloggen" op een bestaand teamlid: geeft de rij een nieuw random
  * session_token en zet dat in het cookie van deze browser. Een eerder
@@ -43,17 +55,27 @@ export async function selectMember(memberId: string): Promise<ActionResult> {
 /**
  * Voegt een nieuw teamlid toe en logt daar direct mee in.
  */
-export async function createMember(name: string): Promise<ActionResult> {
+export async function createMember(
+  name: string,
+  hoursPerWeek: number,
+  workingDays: number[]
+): Promise<ActionResult> {
   const trimmed = name.trim();
   if (!trimmed) return { error: "Vul een naam in." };
   if (trimmed.length > 100) return { error: "Naam is te lang." };
 
+  const contractError = validateContract(hoursPerWeek, workingDays);
+  if (contractError) return { error: contractError };
+
   const supabase = createServiceClient();
   const token = generateSessionToken();
 
-  const { error } = await supabase
-    .from("members")
-    .insert({ name: trimmed, session_token: token });
+  const { error } = await supabase.from("members").insert({
+    name: trimmed,
+    session_token: token,
+    hours_per_week: hoursPerWeek,
+    working_days: workingDays,
+  });
 
   if (error) {
     if (error.code === "23505") {
@@ -70,6 +92,55 @@ export async function createMember(name: string): Promise<ActionResult> {
 export async function logout(): Promise<void> {
   clearSessionCookie();
   revalidatePath("/");
+}
+
+/**
+ * Werkt het contract (uren/week + gewerkte weekdagen) van de ingelogde
+ * gebruiker bij. Alleen de eigen rij: memberId komt uit het session-cookie.
+ */
+export async function updateMemberSettings(
+  hoursPerWeek: number,
+  workingDays: number[]
+): Promise<ActionResult> {
+  const member = await getCurrentMember();
+  if (!member) return { error: "Je bent niet (meer) ingelogd." };
+
+  const contractError = validateContract(hoursPerWeek, workingDays);
+  if (contractError) return { error: contractError };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("members")
+    .update({ hours_per_week: hoursPerWeek, working_days: workingDays })
+    .eq("id", member.id);
+
+  if (error) {
+    return { error: "Opslaan is niet gelukt. Probeer het opnieuw." };
+  }
+
+  revalidatePath("/");
+  return { error: null };
+}
+
+/**
+ * Verwijdert het eigen teamlid-account (en via ON DELETE CASCADE alle
+ * eigen verlofdagen). Kan alleen de eigen rij treffen: memberId komt uit
+ * het session-cookie, niet uit de aanroep.
+ */
+export async function deleteOwnAccount(): Promise<ActionResult> {
+  const member = await getCurrentMember();
+  if (!member) return { error: "Je bent niet (meer) ingelogd." };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("members").delete().eq("id", member.id);
+
+  if (error) {
+    return { error: "Verwijderen is niet gelukt. Probeer het opnieuw." };
+  }
+
+  clearSessionCookie();
+  revalidatePath("/");
+  return { error: null };
 }
 
 /**

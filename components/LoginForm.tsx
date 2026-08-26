@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { selectMember, createMember } from "@/app/actions";
+import { computeTotalDays, WEEKDAY_OPTIONS } from "@/lib/leaveEntitlement";
 
 type MemberOption = { id: string; name: string };
 
@@ -11,6 +12,8 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
   );
   const [selectedId, setSelectedId] = useState(members[0]?.id ?? "");
   const [newName, setNewName] = useState("");
+  const [hoursPerWeek, setHoursPerWeek] = useState(40);
+  const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -27,9 +30,15 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await createMember(newName);
+      const result = await createMember(newName, hoursPerWeek, workingDays);
       if (result.error) setError(result.error);
     });
+  }
+
+  function toggleWorkingDay(day: number) {
+    setWorkingDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
+    );
   }
 
   return (
@@ -88,7 +97,7 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
           </button>
         </form>
       ) : (
-        <form onSubmit={handleCreate} className="mt-4 space-y-3">
+        <form onSubmit={handleCreate} className="mt-4 space-y-4">
           <input
             type="text"
             value={newName}
@@ -97,6 +106,52 @@ export function LoginForm({ members }: { members: MemberOption[] }) {
             className="w-full rounded-md border border-brand-grey/30 px-3 py-2 text-sm text-brand-grey focus:border-brand-main focus:outline-none focus:ring-1 focus:ring-brand-main"
             autoFocus
           />
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-brand-grey">
+              Uren per week
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={40}
+              step={0.5}
+              value={hoursPerWeek}
+              onChange={(e) => setHoursPerWeek(Number(e.target.value))}
+              className="w-full rounded-md border border-brand-grey/30 px-3 py-2 text-sm text-brand-grey focus:border-brand-main focus:outline-none focus:ring-1 focus:ring-brand-main"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-brand-grey">
+              Werkdagen
+            </label>
+            <div className="flex gap-1">
+              {WEEKDAY_OPTIONS.map((d) => (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => toggleWorkingDay(d.value)}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${
+                    workingDays.includes(d.value)
+                      ? "bg-brand-main text-white"
+                      : "bg-brand-grey/10 text-brand-grey"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-brand-grey">
+            Vakantiedagen op basis hiervan:{" "}
+            <span className="font-bold text-brand-dark">
+              {computeTotalDays(hoursPerWeek)}
+            </span>{" "}
+            per jaar (35 dagen bij 40 uur/week, naar rato).
+          </p>
+
           <button
             type="submit"
             disabled={isPending}

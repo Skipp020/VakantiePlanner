@@ -17,6 +17,7 @@ export type Workday = {
   iso: string; // YYYY-MM-DD
   day: number; // dag van de maand
   month: number; // 1-12
+  weekday: number; // 1=ma .. 5=vr
   isMonday: boolean;
 };
 
@@ -48,6 +49,7 @@ export function getWorkdaysByMonth(year: number): MonthGroup[] {
         iso: `${year}-${pad(month)}-${pad(day)}`,
         day,
         month,
+        weekday,
         isMonday: weekday === 1,
       });
     }
