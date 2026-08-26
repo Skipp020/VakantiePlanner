@@ -49,11 +49,21 @@ Toepassing in de planner:
 
 ## Logo
 
-Er is geen logo-bestand of logo-gebruiksregels aangeleverd in het
-brandbook-fragment dat ik ontving. Zodra het logo (en eventuele
-regels zoals minimale marge, minimumgrootte, verboden bewerkingen)
-beschikbaar zijn, vul ik deze sectie aan en verwerk ik het logo in de
-header van de app.
+Het Global Media-logo (afgerond blauw vierkant met een "g"-icoon, met
+daaronder het woordmerk "global") is aangeleverd als `Global Media.png`
+en staat in de app op twee plekken:
+
+- `public/logo.png` — het volledige, originele logo (icoon + woordmerk).
+- `public/logo-mark.png` en `app/icon.png` — een uitgesneden, vierkante
+  versie van alleen het "g"-icoon (zonder woordmerk). Op klein formaat
+  (header, favicon) wordt het woordmerk "global" anders onleesbaar en
+  vervormt het geheel; het icoon alleen blijft daar wel herkenbaar.
+  `app/icon.png` wordt door Next.js automatisch als favicon gebruikt;
+  `logo-mark.png` staat naast de app-titel in de header.
+
+Er zijn geen expliciete logo-gebruiksregels (minimale marge,
+minimumgrootte, verboden bewerkingen) aangeleverd in het
+brandbook-fragment. Zodra die beschikbaar zijn, vul ik deze sectie aan.
 
 ## Stijlprincipes
 

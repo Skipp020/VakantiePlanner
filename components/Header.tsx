@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/app/actions";
 
@@ -10,11 +11,21 @@ export function Header({
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-bold text-brand-dark">VakantiePlanner</h1>
-        <p className="text-sm text-brand-grey">
-          Ingelogd als <span className="font-medium">{memberName}</span>
-        </p>
+      <div className="flex items-center gap-3">
+        <Image
+          src="/logo-mark.png"
+          alt="Global Media"
+          width={40}
+          height={40}
+          className="shrink-0"
+          priority
+        />
+        <div>
+          <h1 className="text-xl font-bold text-brand-dark">VakantiePlanner</h1>
+          <p className="text-sm text-brand-grey">
+            Ingelogd als <span className="font-medium">{memberName}</span>
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
